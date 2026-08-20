@@ -153,3 +153,13 @@ def add_chronological_split(model_data, full_data, split_date):
 
 def filter_to_regular_and_postseason(df):
     return df[df['game_type'].isin(['R', 'F', 'D', 'L', 'W'])].copy()
+
+def chronological_split(model_data, full_data, val_start, test_start):
+    model_data = model_data.copy()
+    model_data['game_date'] = full_data['game_date']
+    
+    train = model_data[model_data['game_date'] < val_start].drop(columns=['game_date'])
+    val = model_data[(model_data['game_date'] >= val_start) & (model_data['game_date'] < test_start)].drop(columns=['game_date'])
+    test = model_data[model_data['game_date'] >= test_start].drop(columns=['game_date'])
+    
+    return train, val, test
