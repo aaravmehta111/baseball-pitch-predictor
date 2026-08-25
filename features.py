@@ -163,3 +163,28 @@ def chronological_split(model_data, full_data, val_start, test_start):
     test = model_data[model_data['game_date'] >= test_start].drop(columns=['game_date'])
     
     return train, val, test
+
+def prepare_for_logistic(train_df, val_df, test_df):
+    target = 'pitch_type'
+    categorical_cols = ['stand', 'p_throws', 'prev_pitch_1', 'prev_pitch_2', 'prev_pitch_3', 'pitcher', 'fielder_2']
+    
+    y_train = train_df[target]
+    y_val = val_df[target]
+    y_test = test_df[target]
+    
+    X_train = train_df.drop(columns=[target])
+    X_val = val_df.drop(columns=[target])
+    X_test = test_df.drop(columns=[target])
+    
+    X_train_enc = pd.get_dummies(X_train, columns=categorical_cols)
+    X_val_enc = pd.get_dummies(X_val, columns=categorical_cols)
+    X_test_enc = pd.get_dummies(X_test, columns=categorical_cols)
+    
+    X_train_enc, X_val_enc = X_train_enc.align(X_val_enc, join='left', axis=1, fill_value=0)
+    X_train_enc, X_test_enc = X_train_enc.align(X_test_enc, join='left', axis=1, fill_value=0)
+    
+    return X_train_enc, y_train, X_val_enc, y_val, X_test_enc, y_test
+
+
+import numpy as np
+
