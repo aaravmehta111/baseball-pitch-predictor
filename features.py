@@ -234,3 +234,24 @@ def consolidate_rare_pitch_types(df, min_count=500):
     df = df.copy()
     df['pitch_type'] = df['pitch_type'].replace(rare_types, 'OTHER')
     return df
+
+def get_pitcher_repertoire(df, pitcher_col='pitcher', pitch_col='pitch_type', min_pct=0.01):
+    pitch_dummies = pd.get_dummies(df[pitch_col]).astype(float)
+    pitch_dummies[pitcher_col] = df[pitcher_col].values
+    pitcher_mix = pitch_dummies.groupby(pitcher_col).mean()
+    repertoire = {}
+    for pid, row in pitcher_mix.iterrows():
+        repertoire[pid] = set(row[row >= min_pct].index)
+    return repertoire
+
+def mask_predictions(probs, pitcher_ids, repertoire, classes):
+    probs = probs.copy()
+    for i, pid in enumerate(pitcher_ids):
+        allowed = repertoire.get(pid, set(classes))
+        for j, cls in enumerate(classes):
+            if cls not in allowed:
+                probs[i, j] = 0
+        row_sum = probs[i].sum()
+        if row_sum > 0:
+            probs[i] = probs[i] / row_sum
+    return probs
