@@ -227,3 +227,10 @@ def pivot_batter_obp(obp_long):
     obp_wide = obp_wide.reset_index()
     return obp_wide
 
+def consolidate_rare_pitch_types(df, min_count=500):
+    counts = df['pitch_type'].value_counts()
+    rare_types = counts[counts < min_count].index.tolist()
+    
+    df = df.copy()
+    df['pitch_type'] = df['pitch_type'].replace(rare_types, 'OTHER')
+    return df
