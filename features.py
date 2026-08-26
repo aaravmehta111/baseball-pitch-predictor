@@ -131,9 +131,11 @@ def select_final_features(df):
     
     dynamic_features = [col for col in df.columns if col.startswith('pct_') or col.startswith('whiff_rate_') or col.startswith('season_pct_')]
     
-    target = ['pitch_type']  # your label
+    batter_features = [col for col in df.columns if col.startswith('batter_obp_vs_') or col.startswith('batter_seen_pct_')]
     
-    final_columns = direct_features + engineered_fixed + dynamic_features + target
+    target = ['pitch_type']
+    
+    final_columns = direct_features + engineered_fixed + dynamic_features + batter_features + target
     
     result = df[final_columns].copy()
     result['on_1b'] = result['on_1b'].notna()
@@ -187,4 +189,41 @@ def prepare_for_logistic(train_df, val_df, test_df):
 
 
 import numpy as np
+
+def compute_batter_pitch_type_stats(batter_df, min_pa=10):
+    pa_ending_events = ['single', 'double', 'triple', 'home_run', 'walk', 'strikeout', 
+                          'field_out', 'grounded_into_double_play', 'force_out', 
+                          'hit_by_pitch', 'field_error', 'sac_fly', 'sac_bunt',
+                          'double_play', 'fielders_choice', 'fielders_choice_out']
+    
+    pa_data = batter_df[batter_df['events'].isin(pa_ending_events)].copy()
+    
+    on_base_events = ['single', 'double', 'triple', 'home_run', 'walk', 'hit_by_pitch']
+    pa_data['reached_base'] = pa_data['events'].isin(on_base_events).astype(int)
+    
+    obp_by_pitch = (
+        pa_data.groupby(['batter', 'pitch_type'])['reached_base']
+        .agg(['mean', 'count'])
+        .reset_index()
+        .rename(columns={'mean': 'obp_vs_pitch', 'count': 'pa_vs_pitch'})
+    )
+    
+    obp_by_pitch = obp_by_pitch[obp_by_pitch['pa_vs_pitch'] >= min_pa]
+    
+    return obp_by_pitch
+
+def compute_batter_pitch_mix_seen(batter_df):
+    pitch_dummies = pd.get_dummies(batter_df['pitch_type']).astype(float)
+    pitch_dummies['batter'] = batter_df['batter'].values
+    
+    pitch_mix = pitch_dummies.groupby('batter').mean().reset_index()
+    pitch_mix.columns = ['batter'] + [f'batter_seen_pct_{c}' for c in pitch_mix.columns if c != 'batter']
+    
+    return pitch_mix
+
+def pivot_batter_obp(obp_long):
+    obp_wide = obp_long.pivot(index='batter', columns='pitch_type', values='obp_vs_pitch')
+    obp_wide.columns = [f'batter_obp_vs_{c}' for c in obp_wide.columns]
+    obp_wide = obp_wide.reset_index()
+    return obp_wide
 
