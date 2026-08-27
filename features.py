@@ -266,3 +266,23 @@ def simplify_pitch_categories(df):
     }
     df['pitch_category'] = df['pitch_type'].map(category_map).fillna('OTHER')
     return df
+
+def compute_pitcher_vs_batter_history(batter_df, min_pa=5):
+    pa_ending_events = ['single', 'double', 'triple', 'home_run', 'walk', 'strikeout', 
+                          'field_out', 'grounded_into_double_play', 'force_out', 
+                          'hit_by_pitch', 'field_error', 'sac_fly', 'sac_bunt',
+                          'double_play', 'fielders_choice', 'fielders_choice_out']
+    
+    pa_data = batter_df[batter_df['events'].isin(pa_ending_events)].copy()
+    on_base_events = ['single', 'double', 'triple', 'home_run', 'walk', 'hit_by_pitch']
+    pa_data['reached_base'] = pa_data['events'].isin(on_base_events).astype(int)
+    
+    matchup_stats = (
+        pa_data.groupby(['batter', 'pitcher'])['reached_base']
+        .agg(['mean', 'count'])
+        .reset_index()
+        .rename(columns={'mean': 'obp_vs_this_pitcher', 'count': 'pa_vs_this_pitcher'})
+    )
+    
+    matchup_stats = matchup_stats[matchup_stats['pa_vs_this_pitcher'] >= min_pa]
+    return matchup_stats
