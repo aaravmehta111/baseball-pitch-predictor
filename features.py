@@ -255,3 +255,14 @@ def mask_predictions(probs, pitcher_ids, repertoire, classes):
         if row_sum > 0:
             probs[i] = probs[i] / row_sum
     return probs
+
+def simplify_pitch_categories(df):
+    df = df.copy()
+    category_map = {
+        'FF': 'FASTBALL', 'SI': 'FASTBALL', 'FC': 'FASTBALL', 'FA': 'FASTBALL',
+        'SL': 'BREAKING', 'CU': 'BREAKING', 'ST': 'BREAKING', 'KC': 'BREAKING', 'CS': 'BREAKING', 'SV': 'BREAKING',
+        'CH': 'OFFSPEED', 'FS': 'OFFSPEED', 'EP': 'OFFSPEED',
+        'PO': 'OTHER', 'UN': 'OTHER',
+    }
+    df['pitch_category'] = df['pitch_type'].map(category_map).fillna('OTHER')
+    return df
