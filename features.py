@@ -286,3 +286,26 @@ def compute_pitcher_vs_batter_history(batter_df, min_pa=5):
     
     matchup_stats = matchup_stats[matchup_stats['pa_vs_this_pitcher'] >= min_pa]
     return matchup_stats
+
+def add_runner_speed_features(df, sprint_2025, sprint_2026):
+    df = df.copy()
+    
+    sprint_lookup_2025 = sprint_2025.set_index('player_id')['sprint_speed'].to_dict()
+    sprint_lookup_2026 = sprint_2026.set_index('player_id')['sprint_speed'].to_dict()
+    
+    def get_speed(runner_id, year):
+        if pd.isna(runner_id):
+            return np.nan
+        lookup = sprint_lookup_2026 if year == 2026 else sprint_lookup_2025
+        return lookup.get(int(runner_id), np.nan)
+    
+    df['year'] = pd.to_datetime(df['game_date']).dt.year
+    
+    df['on_1b_speed'] = df.apply(lambda row: get_speed(row['on_1b'], row['year']), axis=1)
+    df['on_2b_speed'] = df.apply(lambda row: get_speed(row['on_2b'], row['year']), axis=1)
+    df['on_3b_speed'] = df.apply(lambda row: get_speed(row['on_3b'], row['year']), axis=1)
+    
+    df['fast_runner_on_base'] = ((df['on_1b_speed'] >= 28) | (df['on_2b_speed'] >= 28) | (df['on_3b_speed'] >= 28)).astype(int)
+    
+    df = df.drop(columns=['year'])
+    return df
